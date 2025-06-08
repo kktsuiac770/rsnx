@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rsnx = "0.1"
+rsnx = "0.1.0"
 ```
 
 ### Basic Usage
@@ -208,7 +208,7 @@ cargo test --test integration_tests
 
 ```toml
 [dependencies]
-rsnx = { version = "0.1", features = ["serde"] }
+rsnx = { version = "0.1.0", features = ["serde"] }
 ```
 
 ## Comparison with gonx

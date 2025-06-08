@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "A Rust library for parsing nginx access logs, inspired by gonx"
 license = "MIT"
-repository = "https://github.com/your-username/rsnx"
+repository = "https://github.com/kktsuiac_770/rsnx"
 keywords = ["nginx", "log", "parsing", "access-log"]
 categories = ["parsing", "text-processing"]
 

@@ -123,9 +123,9 @@ fn combined_log_format_example() -> Result<(), Box<dyn std::error::Error>> {
 
         println!();
         println!("Analysis:");
-        if status >= 200 && status < 300 {
+        if (200..300).contains(&status) {
             println!("  ✓ Successful request (2xx status)");
-        } else if status >= 400 && status < 500 {
+        } else if (400..500).contains(&status) {
             println!("  ⚠ Client error (4xx status)");
         } else if status >= 500 {
             println!("  ✗ Server error (5xx status)");
