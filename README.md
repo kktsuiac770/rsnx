@@ -7,9 +7,25 @@
 A Rust library for parsing nginx access logs, inspired by the Go library [gonx](https://github.com/satyrius/gonx).
 
 
-## Quick Start
+## Installation
+
+### From GitHub (Recommended)
 
 Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+rsnx = { git = "https://github.com/kktsuiac770/rsnx.git", tag = "v0.1.0" }
+```
+
+Or use the latest development version:
+
+```toml
+[dependencies]
+rsnx = { git = "https://github.com/kktsuiac770/rsnx.git" }
+```
+
+### From crates.io (Future)
 
 ```toml
 [dependencies]
@@ -228,6 +244,75 @@ This library aims to provide similar functionality to the Go library [gonx](http
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Getting Started from GitHub
+
+### 1. Clone and Test Locally
+
+```bash
+# Clone the repository
+git clone https://github.com/kktsuiac770/rsnx.git
+cd rsnx
+
+# Run tests to verify everything works
+cargo test
+
+# Run the example to see it in action
+cargo run --example basic
+
+# Build the library
+cargo build --release
+```
+
+### 2. Use in Your Project
+
+Add to your `Cargo.toml`:
+
+```toml
+[dependencies]
+rsnx = { git = "https://github.com/kktsuiac770/rsnx.git", tag = "v0.1.0" }
+```
+
+### 3. Available Tags/Versions
+
+- `v0.1.0` - Initial stable release with full functionality
+- `main` - Latest development version (may include unreleased features)
+
+### 4. Example Project Setup
+
+Create a new Rust project and use rsnx:
+
+```bash
+# Create new project
+cargo new my-log-parser
+cd my-log-parser
+
+# Add rsnx to Cargo.toml
+echo 'rsnx = { git = "https://github.com/kktsuiac770/rsnx.git", tag = "v0.1.0" }' >> Cargo.toml
+```
+
+Then use it in your `src/main.rs`:
+
+```rust
+use rsnx::Reader;
+use std::fs::File;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let file = File::open("access.log")?;
+    let format = r#"$remote_addr [$time_local] "$request" $status $body_bytes_sent"#;
+
+    let reader = Reader::new(file, format)?;
+
+    for entry in reader {
+        let entry = entry?;
+        println!("IP: {} - Status: {}",
+                 entry.field("remote_addr")?,
+                 entry.int_field("status")?);
+    }
+
+    Ok(())
+}
+```
 
 ## Contributing
 
