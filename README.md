@@ -6,14 +6,6 @@
 
 A Rust library for parsing nginx access logs, inspired by the Go library [gonx](https://github.com/satyrius/gonx).
 
-## Features
-
-- **Format String Parsing**: Convert nginx log format strings into regex patterns for efficient parsing
-- **Type-Safe Field Access**: Access log fields as strings, integers, or floats with proper error handling
-- **Nginx Config Integration**: Extract log formats directly from nginx configuration files
-- **Iterator Interface**: Process log files line by line using Rust's iterator patterns
-- **Comprehensive Error Handling**: Detailed error types using `thiserror`
-- **Optional Serde Support**: Serialize/deserialize entries when the `serde` feature is enabled
 
 ## Quick Start
 

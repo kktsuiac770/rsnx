@@ -12,13 +12,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 1: Basic log parsing with custom format
     basic_parsing_example()?;
 
-    // Example 2: Nginx configuration parsing
+    // Example 2: Combined Log Format
+    combined_log_format_example()?;
+
+    // Example 3: Custom Formats
+    custom_formats_example()?;
+
+    // Example 4: Nginx configuration parsing
     nginx_config_example()?;
 
-    // Example 3: Processing multiple log entries
+    // Example 5: Processing multiple log entries
     multiple_entries_example()?;
 
-    // Example 4: Error handling
+    // Example 6: Error handling
     error_handling_example()?;
 
     Ok(())
@@ -70,9 +76,190 @@ fn basic_parsing_example() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Example 2: Extracting log format from nginx configuration
+/// Example 2: Combined Log Format (Apache/Nginx combined format)
+fn combined_log_format_example() -> Result<(), Box<dyn std::error::Error>> {
+    println!("2. Combined Log Format");
+    println!("---------------------");
+
+    // Sample nginx access log line in combined format
+    let log_line = r#"203.0.113.195 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)""#;
+
+    // Combined log format includes referer and user agent
+    let format = r#"$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent""#;
+
+    println!("Log line: {}", log_line);
+    println!("Format:   Combined Log Format");
+    println!();
+
+    // Create a reader
+    let cursor = Cursor::new(log_line);
+    let mut reader = Reader::new(cursor, format)?;
+
+    // Parse the log entry
+    if let Some(result) = reader.read() {
+        let entry = result?;
+
+        println!("Parsed fields:");
+        println!("  Remote Address: {}", entry.field("remote_addr")?);
+        println!("  Remote User:    {}", entry.field("remote_user")?);
+        println!("  Time Local:     {}", entry.field("time_local")?);
+        println!("  Request:        {}", entry.field("request")?);
+        println!(
+            "  Status:         {} (as int: {})",
+            entry.field("status")?,
+            entry.int_field("status")?
+        );
+        println!(
+            "  Bytes Sent:     {} (as int: {})",
+            entry.field("body_bytes_sent")?,
+            entry.int_field("body_bytes_sent")?
+        );
+        println!("  Referer:        {}", entry.field("http_referer")?);
+        println!("  User Agent:     {}", entry.field("http_user_agent")?);
+
+        // Demonstrate some analysis
+        let status = entry.int_field("status")?;
+        let bytes = entry.int_field("body_bytes_sent")?;
+
+        println!();
+        println!("Analysis:");
+        if status >= 200 && status < 300 {
+            println!("  ✓ Successful request (2xx status)");
+        } else if status >= 400 && status < 500 {
+            println!("  ⚠ Client error (4xx status)");
+        } else if status >= 500 {
+            println!("  ✗ Server error (5xx status)");
+        }
+
+        if bytes > 1000 {
+            println!("  📊 Large response ({} bytes)", bytes);
+        } else {
+            println!("  📄 Small response ({} bytes)", bytes);
+        }
+
+        // Check if it's a bot/crawler
+        let user_agent = entry.field("http_user_agent")?;
+        if user_agent.to_lowercase().contains("bot")
+            || user_agent.to_lowercase().contains("crawler")
+        {
+            println!("  🤖 Bot/Crawler detected");
+        } else {
+            println!("  👤 Human user");
+        }
+    }
+
+    println!("\n");
+    Ok(())
+}
+
+/// Example 3: Custom Formats for different log types
+fn custom_formats_example() -> Result<(), Box<dyn std::error::Error>> {
+    println!("3. Custom Formats");
+    println!("-----------------");
+
+    // Example 3a: Application log format
+    println!("3a. Application Log Format:");
+    let app_log =
+        r#"[INFO] 2023-12-25T14:30:00Z user@example.com "action=login&result=success" 1.234ms"#;
+    let app_format = r#"[$level] $timestamp $user "$params" $duration"#;
+
+    println!("Log: {}", app_log);
+    println!("Format: {}", app_format);
+
+    let cursor = Cursor::new(app_log);
+    let mut reader = Reader::new(cursor, app_format)?;
+
+    if let Some(result) = reader.read() {
+        let entry = result?;
+        println!("  Level:     {}", entry.field("level")?);
+        println!("  Timestamp: {}", entry.field("timestamp")?);
+        println!("  User:      {}", entry.field("user")?);
+        println!("  Params:    {}", entry.field("params")?);
+        println!("  Duration:  {}", entry.field("duration")?);
+    }
+
+    println!();
+
+    // Example 3b: Load balancer log format
+    println!("3b. Load Balancer Log Format:");
+    let lb_log = r#"2023-12-25 14:30:00 backend1 192.168.1.100 GET /api/health 200 0.045"#;
+    let lb_format = r#"$date $time $backend $client_ip $method $path $status $response_time"#;
+
+    println!("Log: {}", lb_log);
+    println!("Format: {}", lb_format);
+
+    let cursor = Cursor::new(lb_log);
+    let mut reader = Reader::new(cursor, lb_format)?;
+
+    if let Some(result) = reader.read() {
+        let entry = result?;
+        println!("  Date:          {}", entry.field("date")?);
+        println!("  Time:          {}", entry.field("time")?);
+        println!("  Backend:       {}", entry.field("backend")?);
+        println!("  Client IP:     {}", entry.field("client_ip")?);
+        println!("  Method:        {}", entry.field("method")?);
+        println!("  Path:          {}", entry.field("path")?);
+        println!("  Status:        {}", entry.int_field("status")?);
+        println!("  Response Time: {} seconds", entry.field("response_time")?);
+
+        // Convert response time to float for analysis
+        let response_time = entry.float_field("response_time")?;
+        if response_time > 1.0 {
+            println!("  ⚠ Slow response (> 1s)");
+        } else if response_time > 0.1 {
+            println!("  ⚡ Moderate response (> 100ms)");
+        } else {
+            println!("  🚀 Fast response (< 100ms)");
+        }
+    }
+
+    println!();
+
+    // Example 3c: Security log format
+    println!("3c. Security Log Format:");
+    let security_log = r#"ALERT 2023-12-25T14:30:00Z 203.0.113.195 "SQL injection attempt" severity=HIGH blocked=true"#;
+    let security_format =
+        r#"$alert_type $timestamp $source_ip "$description" severity=$severity blocked=$blocked"#;
+
+    println!("Log: {}", security_log);
+    println!("Format: {}", security_format);
+
+    let cursor = Cursor::new(security_log);
+    let mut reader = Reader::new(cursor, security_format)?;
+
+    if let Some(result) = reader.read() {
+        let entry = result?;
+        println!("  Alert Type:   {}", entry.field("alert_type")?);
+        println!("  Timestamp:    {}", entry.field("timestamp")?);
+        println!("  Source IP:    {}", entry.field("source_ip")?);
+        println!("  Description:  {}", entry.field("description")?);
+        println!("  Severity:     {}", entry.field("severity")?);
+        println!("  Blocked:      {}", entry.field("blocked")?);
+
+        let severity = entry.field("severity")?;
+        let blocked = entry.field("blocked")?;
+
+        match severity {
+            "HIGH" | "CRITICAL" => println!("  🚨 High priority alert!"),
+            "MEDIUM" => println!("  ⚠ Medium priority alert"),
+            "LOW" => println!("  ℹ Low priority alert"),
+            _ => println!("  ? Unknown severity level"),
+        }
+
+        if blocked == "true" {
+            println!("  🛡 Threat successfully blocked");
+        } else {
+            println!("  ⚠ Threat was NOT blocked");
+        }
+    }
+
+    println!("\n");
+    Ok(())
+}
+
+/// Example 4: Extracting log format from nginx configuration
 fn nginx_config_example() -> Result<(), Box<dyn std::error::Error>> {
-    println!("2. Nginx Configuration Parsing");
+    println!("4. Nginx Configuration Parsing");
     println!("------------------------------");
 
     // Sample nginx configuration with log format
@@ -126,9 +313,9 @@ fn nginx_config_example() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Example 3: Processing multiple log entries
+/// Example 5: Processing multiple log entries
 fn multiple_entries_example() -> Result<(), Box<dyn std::error::Error>> {
-    println!("3. Processing Multiple Log Entries");
+    println!("5. Processing Multiple Log Entries");
     println!("----------------------------------");
 
     let log_data = r#"127.0.0.1 [08/Nov/2013:13:39:18 +0000] "GET /api/users HTTP/1.1" 200 1024
@@ -183,20 +370,20 @@ fn multiple_entries_example() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Example 4: Error handling scenarios
+/// Example 6: Error handling scenarios
 fn error_handling_example() -> Result<(), Box<dyn std::error::Error>> {
-    println!("4. Error Handling");
+    println!("6. Error Handling");
     println!("-----------------");
 
-    // Example 4a: Invalid format string
-    println!("4a. Invalid format string:");
+    // Example 6a: Invalid format string
+    println!("6a. Invalid format string:");
     match Reader::new(Cursor::new(""), "[invalid regex") {
         Ok(_) => println!("  Unexpected success"),
         Err(e) => println!("  Error: {}", e),
     }
 
-    // Example 4b: Line doesn't match format
-    println!("\n4b. Line doesn't match format:");
+    // Example 6b: Line doesn't match format
+    println!("\n6b. Line doesn't match format:");
     let log_line = "This is not a valid log line";
     let format = r#"$remote_addr [$time_local] "$request""#;
 
@@ -209,8 +396,8 @@ fn error_handling_example() -> Result<(), Box<dyn std::error::Error>> {
         None => println!("  No data"),
     }
 
-    // Example 4c: Field not found
-    println!("\n4c. Field not found:");
+    // Example 6c: Field not found
+    println!("\n6c. Field not found:");
     let log_line = r#"127.0.0.1 [08/Nov/2013:13:39:18 +0000] "GET /api/foo HTTP/1.1""#;
     let format = r#"$remote_addr [$time_local] "$request""#;
 
@@ -224,8 +411,8 @@ fn error_handling_example() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Example 4d: Type conversion error
-    println!("\n4d. Type conversion error:");
+    // Example 6d: Type conversion error
+    println!("\n6d. Type conversion error:");
     let log_line = r#"127.0.0.1 [08/Nov/2013:13:39:18 +0000] "GET /api/foo HTTP/1.1" not_a_number"#;
     let format = r#"$remote_addr [$time_local] "$request" $status"#;
 
